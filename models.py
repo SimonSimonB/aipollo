@@ -3,7 +3,7 @@ import tensorflow as tf
 def get_simple_cnn(img_height, img_width, img_channels, num_classes):
     inputs = tf.keras.layers.Input((img_height, img_width, img_channels))
     model = tf.keras.layers.Lambda(lambda x: x / 255)(inputs)
-    model = tf.keras.layers.Conv2D(32, (16, 16), activation=tf.keras.activations.relu, kernel_initializer='he_normal', padding='same')(model)
+    model = tf.keras.layers.Conv2D(32, (5, 5), activation=tf.keras.activations.relu, kernel_initializer='he_normal', padding='same')(model)
     outputs = tf.keras.layers.Conv2D(num_classes, (1, 1), activation='softmax')(model)
     
     model = tf.keras.Model(inputs=[inputs], outputs=[outputs])
@@ -12,10 +12,13 @@ def get_simple_cnn(img_height, img_width, img_channels, num_classes):
 
     return model
 
-def weighted_sparse_categorical_crossentropy(num_classes):
-    weights = [0.999] + ([1.0] * (num_classes - 1))
+
+def get_weighted_sparse_categorical_crossentropy(class_weights):
+    weights = [0.1] + ([1.0] * (num_classes - 1))
     def wscce(y_true, y_pred):
         print(tf.executing_eagerly())
+        print(type(y_true))
+        print(type(y_pred))
         #Kweights = tf.keras.constant(weights)
         #if not tf.keras.is_tensor(y_pred):
         #    y_pred = tf.keras.constant(y_pred)
@@ -33,6 +36,7 @@ def weighted_sparse_categorical_crossentropy(num_classes):
 
         return weights_tensor * spc
     return wscce
+
 
 def get_pretrained_unet(img_height, img_width, num_classes):
     model = get_unet(img_height, img_width, 1, num_classes)

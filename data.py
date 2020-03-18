@@ -4,6 +4,7 @@ import tensorflow as tf
 import cv2
 import os
 import random
+from collections import defaultdict
 
 COLAB = False
 if COLAB:
@@ -136,18 +137,21 @@ def get_random_instance(img_height=None, img_width=None):
     return score_image, mask
 
 
-
-
 class DataProvider:
 
-    def __init__(self, img_height, img_width, num_classes, one_hot=False, weight_background=True):
-        assert not(weight_background and not one_hot)
-
+    def __init__(self, img_height, img_width, labels_to_use=list(range(0, 158)), one_hot=False):
         self.img_height = img_height
         self.img_width = img_width
-        self.num_classes = num_classes
         self.one_hot = one_hot
-        self.weight_background = weight_background
+
+        labels_to_use.append(0)
+        labels_to_use = list(set(labels_to_use))
+        labels_to_use.sort()
+        self.relabeling_dict = defaultdict(int)
+        for original_label in range(0, 158):
+            if original_label in labels_to_use:
+                self.relabeling_dict[original_label] = labels_to_use.index(original_label)
+
 
     def yield_data(self):
         extracted_staves_path = str(deepscore_path / 'extracted_staves_') + str(self.img_height) + 'x' + str(self.img_width)
@@ -160,23 +164,20 @@ class DataProvider:
                 score_image = cv2.imread(image_filename, cv2.IMREAD_GRAYSCALE)
                 mask = cv2.imread(mask_filename, cv2.IMREAD_GRAYSCALE)
 
+                # Relabel classes
+                for index, value in np.ndenumerate(mask):
+                    mask[index] = self.relabeling_dict[value]
+
                 # Apply one-hot encoding to the mask
                 if self.one_hot:
-                    mask = tf.keras.utils.to_categorical(mask, num_classes=self.num_classes)
+                    mask = tf.keras.utils.to_categorical(mask, num_classes=len(self.relabeling_dict))
                 
-                # Weight the labels, to trick categorical cross entropy to effectively give less weight to getting background pixels right.
-                if self.weight_background:
-                    weights = [0.99] + ([1] * (self.num_classes-1))
-                    #TODO 
-                    for i in range(mask.shape[0]):
-                        for j in range(mask.shape[1]):
-                            mask[i][j] = np.multiply(mask[i][j], weights)
-
                 score_image = score_image.reshape(self.img_height, self.img_width, 1)
 
                 print('\n' + f'Providing image {mask_filename}')
                 i += 1
                 yield score_image, mask
+
 
     def get_data(self, stop_when_above=2):
         X = []
@@ -205,4 +206,7 @@ class DataProvider:
         X = np.asarray(X)
         y = np.asarray(y)
         return X, y
+    
+    def get_number_classes(self):
+        return len(set(self.relabeling_dict.values()))
 

@@ -107,42 +107,21 @@ def make_prediction():
     #cv2.imshow('Prediction', prediction)
     #cv2.waitKey(0)
 
-def train_model(save=False, weighted=False):
+def train_model(save=False):
+    data_provider = data.DataProvider(IMG_HEIGHT, IMG_WIDTH, labels_to_use=[43], one_hot=False)
+    dataset = tf.data.Dataset.from_generator(data_provider.yield_data, (tf.float32, tf.int32), ((IMG_HEIGHT, IMG_WIDTH, 1), (IMG_HEIGHT, IMG_WIDTH)))
+    dataset = dataset.batch(1)
+    debug_image, debug_mask = next(dataset.__iter__())
+    debug_image = debug_image.numpy().reshape(IMG_HEIGHT, IMG_WIDTH)
+    debug_mask = debug_mask.numpy().reshape(IMG_HEIGHT, IMG_WIDTH)
 
-    if weighted:
-        data_provider = data.DataProvider(IMG_HEIGHT, IMG_WIDTH, NUM_CLASSES, one_hot=True, weight_background=True)
-        dataset = tf.data.Dataset.from_generator(data_provider.yield_data, 
-            (tf.float32, tf.int32), ((IMG_HEIGHT, IMG_WIDTH, 1), (IMG_HEIGHT, IMG_WIDTH, 158)))
-        dataset = dataset.batch(1)
-
-
-        debug_image, debug_mask = next(dataset.__iter__())
-        debug_image = debug_image.numpy().reshape(IMG_HEIGHT, IMG_WIDTH)
-        debug_mask = debug_mask.numpy().reshape(IMG_HEIGHT, IMG_WIDTH, NUM_CLASSES)
-        debug_mask = np.argmax(debug_mask, axis=2)
-        callbacks = [PerClassMetric(debug_image, debug_mask)]
-
-        model = models.get_unet(IMG_HEIGHT, IMG_WIDTH, IMG_CHANNELS, NUM_CLASSES, one_hot=True)
-        if save:
-            callbacks.append(SaveModelAfterBatch(frequency=800))
-        history = model.fit(dataset, callbacks=callbacks)
-
-
-    else:
-        data_provider = data.DataProvider(IMG_HEIGHT, IMG_WIDTH, NUM_CLASSES, one_hot=False, weight_background=False)
-        dataset = tf.data.Dataset.from_generator(data_provider.yield_data, (tf.float32, tf.int32), ((IMG_HEIGHT, IMG_WIDTH, 1), (IMG_HEIGHT, IMG_WIDTH)))
-        dataset = dataset.batch(1)
-        debug_image, debug_mask = next(dataset.__iter__())
-        debug_image = debug_image.numpy().reshape(IMG_HEIGHT, IMG_WIDTH)
-        debug_mask = debug_mask.numpy().reshape(IMG_HEIGHT, IMG_WIDTH)
-
-        #model = models.get_simple_cnn(IMG_HEIGHT, IMG_WIDTH, IMG_CHANNELS, NUM_CLASSES)
-        model = models.get_unet(IMG_HEIGHT, IMG_WIDTH, IMG_CHANNELS, NUM_CLASSES)
-        callbacks = [PerClassMetric(debug_image, debug_mask), ShowPrediction(debug_image, debug_mask, frequency=1)]
-        if save:
-            callbacks.append(SaveModelAfterBatch(frequency=800))
-        history = model.fit(dataset, callbacks=callbacks)
+    #model = models.get_simple_cnn(IMG_HEIGHT, IMG_WIDTH, IMG_CHANNELS, data_provider.get_number_classes())
+    model = models.get_unet(IMG_HEIGHT, IMG_WIDTH, IMG_CHANNELS, data_provider.get_number_classes())
+    callbacks = [PerClassMetric(debug_image, debug_mask), ShowPrediction(debug_image, debug_mask, frequency=1)]
+    if save:
+        callbacks.append(SaveModelAfterBatch(frequency=800))
+    history = model.fit(dataset, callbacks=callbacks)
 
 #benchmark_model(num_instances=50)
 #make_prediction()
-train_model(save=False, weighted=True)
+train_model(save=False)
