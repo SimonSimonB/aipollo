@@ -1,0 +1,6 @@
+{
+    "python.pythonPath": "C:\\Users\\simon\\Coding\\PythonVirtualEnvs\\dataenv\\Scripts\\python.exe",
+    "code-runner.executorMap": {
+        "python": "$pythonPath $fullFileName"
+    }
+}
