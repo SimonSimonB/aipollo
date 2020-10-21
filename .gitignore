@@ -1,3 +1,7 @@
 logs/
 __pycache__/
 rnn/data/
+rnntorch/data/
+unet-torch/data/
+rnn/checkpoints/
+rnn/tf_crnn/
