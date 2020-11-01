@@ -4,11 +4,18 @@
     // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
     "version": "0.2.0",
     "configurations": [
-        {
-            "name": "Python: Aipollo",
+        {   
+            "name": "Python: Train UNet",
             "type": "python",
             "request": "launch",
-            "program": "unet-torch/aipollo.py",
+            "program": "aipollo_processor/detectors/unet_torch/unet-torch.py",
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "Python: Staff line detector test",
+            "type": "python",
+            "request": "launch",
+            "program": "aipollo_processor/detectors/staff_line_detector_test.py",
             "console": "integratedTerminal"
         },
         {

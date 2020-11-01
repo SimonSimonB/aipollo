@@ -15,12 +15,12 @@ class RandomResize:
         target = target.astype(np.uint8)
         image, target = torchvision.transforms.functional.to_pil_image(image, mode='L'), torchvision.transforms.functional.to_pil_image(target, mode='L')
 
-        rotation = torchvision.transforms.RandomAffine(30, translate=None, scale=None, shear=None, resample=False)
+        rotation = torchvision.transforms.RandomAffine(30, translate=None, scale=(0.3, 1), shear=None, resample=False)
         angle, translations, scale, shear = rotation.get_params(rotation.degrees, rotation.translate, rotation.scale, rotation.shear, (image_height, image_width))
         image = torchvision.transforms.functional.affine(image, angle, translations, scale, shear, fillcolor=255)
         target = torchvision.transforms.functional.affine(target, angle, translations, scale, shear, fillcolor=0)
 
-        random_crop = torchvision.transforms.RandomResizedCrop(size=(image_height, image_width), scale=(0.7, 0.99), ratio=(0.5*aspect_ratio, 2*aspect_ratio))
+        random_crop = torchvision.transforms.RandomResizedCrop(size=(image_height, image_width), scale=(0.9, 0.9), ratio=(0.5*aspect_ratio, 2*aspect_ratio))
         i, j, h, w = random_crop.get_params(image, random_crop.scale, random_crop.ratio)
         image = torchvision.transforms.functional.resized_crop(image, i, j, h, w, random_crop.size, random_crop.interpolation)
         target = torchvision.transforms.functional.resized_crop(target, i, j, h, w, random_crop.size, random_crop.interpolation)

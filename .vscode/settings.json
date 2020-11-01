@@ -2,5 +2,15 @@
     "python.pythonPath": "C:\\Users\\simon\\Coding\\PythonVirtualEnvs\\dataenv\\Scripts\\python.exe",
     "code-runner.executorMap": {
         "python": "$pythonPath $fullFileName"
-    }
+    },
+    "python.testing.unittestArgs": [
+        "-v",
+        "-s",
+        ".",
+        "-p",
+        "*test*.py"
+    ],
+    "python.testing.pytestEnabled": false,
+    "python.testing.nosetestsEnabled": false,
+    "python.testing.unittestEnabled": true
 }

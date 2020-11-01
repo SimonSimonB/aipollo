@@ -1,7 +1,10 @@
-logs/
+aipollo_processor/logs/
 __pycache__/
-rnn/data/
-rnntorch/data/
-unet-torch/data/
-rnn/checkpoints/
-rnn/tf_crnn/
+aipollo_processor/detectors/rnn/data/
+aipollo_processor/detectors/rnntorch/data/
+aipollo_processor/detectors/unet_torch/data/
+aipollo_processor/detectors/unet_torch/logs/
+aipollo_processor/detectors/rnn/checkpoints/
+aipollo_processor/detectors/rnn/tf_crnn/
+aipollo_processor/detectors/unet-tf/
+sample_scans/
