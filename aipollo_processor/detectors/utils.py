@@ -8,7 +8,6 @@ import torch
 
 Tile = collections.namedtuple('Tile', 'data start_y start_x')
 def image_to_tiles(image, tile_height=512, tile_width=512):
-    image = cv2.normalize(image, None, alpha=0, beta=1, norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_32F)
     #snippet_image = cv2.resize(snippet_image, (snippet_image.shape[1] // downsampling_factor, snippet_image.shape[0] // downsampling_factor))
 
     tiles = []
@@ -20,16 +19,17 @@ def image_to_tiles(image, tile_height=512, tile_width=512):
     if image.shape[1] % tile_width != 0:
         start_xs.append(image.shape[1] - tile_width)
 
-
     for start_y in start_ys:
         for start_x in start_xs:
-            tile_data = image[start_y:start_y+tile_height, start_x:start_x+tile_width]
+            tile_data = np.copy(image[start_y:start_y+tile_height, start_x:start_x+tile_width])
             tile_data = tile_data.reshape(1, tile_data.shape[0], tile_data.shape[1])
             tiles.append(Tile(tile_data, start_y, start_x))
 
     return tiles
 
+
 def classify(image, model):
+    image = cv2.normalize(image, None, alpha=0, beta=1, norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_32F)
     image_tiles = image_to_tiles(image)
     mask = np.zeros(shape=(image.shape[0], image.shape[1]))
 

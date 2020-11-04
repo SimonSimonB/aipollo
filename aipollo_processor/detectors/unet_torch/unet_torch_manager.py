@@ -5,9 +5,9 @@ import torch.optim
 import torch
 import math
 
-import models
-import transforms
-import data
+from detectors.unet_torch import models
+from detectors.unet_torch import transforms
+from detectors.unet_torch import data
 import datetime
 import pathlib
 
@@ -15,23 +15,21 @@ def predict_test():
     # Load image
     pass
 
-def write_dataset_to_disk():
-    data.write_to_disk(512, 512, [[9]])
-    #data.write_to_disk(512, 512, [[36, 38]])
+def write_dataset_to_disk(label_groups):
+    data.write_to_disk(512, 512, label_groups)
 
-def train_net():
+def train_net(label_groups):
     IMAGE_HEIGHT = 512
     IMAGE_WIDTH = 512
     weight_foreground_factor = None
     batch_size = 4
     validation_interval = 1500
     save_interval = 1500
-    class_groups = [[-1]] # 34 = black notehead; 36 = half notehead; 38 = whole notehead
 
 
     model = models.UNet()
-    log_path = pathlib.Path('./aipollo_processor/detectors/unet_torch/logs/' + '-'.join([str(class_group) for class_group in class_groups]) + '--' + datetime.datetime.now().strftime('%Y-%m-%d-%H.%M.%S'))
-    model.load_state_dict(torch.load('aipollo_processor/detectors/unet_torch/logs/[-1]--2020-10-23-18.07.47/7500.pt'))
+    log_path = pathlib.Path('./aipollo_processor/detectors/unet_torch/logs/' + '-'.join([str(label_group) for label_group in label_groups]) + '--' + datetime.datetime.now().strftime('%Y-%m-%d-%H.%M.%S'))
+    model.load_state_dict(torch.load('aipollo_processor/detectors/unet_torch/logs/[-1]--2020-10-29-18.37.07/1500.pt'))
 
     criterion = torch.nn.BCELoss()
     optimizer = torch.optim.Adam(model.parameters())
@@ -39,7 +37,7 @@ def train_net():
     dataset = data.ScoreSnippetsDataset(
         IMAGE_HEIGHT, 
         IMAGE_WIDTH, 
-        class_groups, 
+        label_groups, 
         transform=torchvision.transforms.Compose([transforms.RandomResize(), transforms.Noise(), transforms.Normalize()])
     )
 
@@ -122,6 +120,6 @@ def train_net():
 
 if __name__ == '__main__':
     #cProfile.run('train_net()')
-    #write_dataset_to_disk()
-    train_net()
+    write_dataset_to_disk()
+    #train_net()
 

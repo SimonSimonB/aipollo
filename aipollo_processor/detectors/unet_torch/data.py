@@ -6,6 +6,7 @@ import numpy as np
 import torch
 import cv2
 import os
+from .. import utils
 
 COLAB = False
 if COLAB:
@@ -15,7 +16,7 @@ if COLAB:
 deepscore_path = pathlib.Path('./drive/My Drive/Privates/Coding/aipollo/data/deep_scores_dense_extended') if COLAB else pathlib.Path('C:/Users/simon/Google Drive/Privates/Coding/aipollo/data/deep_scores_dense_extended')
 cache_path = pathlib.Path('C:/Users/simon/Coding/ML/aipollo/aipollo_processor/detectors/unet_torch/data/')
 
-def write_to_disk(snippet_height, snippet_width, label_groups, downsampling_factor=2, skip_empty=True):
+def write_to_disk(snippet_height, snippet_width, label_groups, downsampling_factor=3, skip_empty=True):
     snippet_number = 0
     for image_name in tqdm.tqdm(os.listdir(str(deepscore_path / 'images_png'))):
         image_filename = str(deepscore_path / 'images_png') + '/' + image_name
@@ -23,37 +24,37 @@ def write_to_disk(snippet_height, snippet_width, label_groups, downsampling_fact
         score_image = cv2.imread(image_filename, cv2.IMREAD_GRAYSCALE)
         mask = cv2.imread(mask_filename, cv2.IMREAD_GRAYSCALE)
 
-        y_range = range(50, score_image.shape[0] - 50 - (2 * snippet_height), (2 * snippet_height)) if random.choice([True, False]) else range(score_image.shape[0] - 50 - (2 * snippet_height), 50, -(2 * snippet_height))
-        x_range = range(50, score_image.shape[1] - 50 - (2 * snippet_width), (2 * snippet_width)) if random.choice([True, False]) else range(score_image.shape[1] - 50 - (2 * snippet_width), 50, -(2 * snippet_width))
+        score_image_tiles = utils.image_to_tiles(score_image, tile_height=downsampling_factor * snippet_height, tile_width=downsampling_factor * snippet_width)
+        mask_tiles = utils.image_to_tiles(mask, tile_height=downsampling_factor * snippet_height, tile_width=downsampling_factor * snippet_width)
 
-        for y in y_range:
-            for x in x_range:
-                snippet_image = score_image[y:y + 2 * snippet_height, x:x + 2 * snippet_width]
-                snippet_mask = mask[y:y + 2 * snippet_height, x:x + 2 * snippet_width]
+        for score_image_tile, mask_tile in zip(score_image_tiles, mask_tiles):
+            snippet_image = score_image_tile.data[0]
+            snippet_mask = mask_tile.data[0]
 
-                if snippet_image.mean() == 255:
-                    print('Skipped a snippet which was all white')
-                    continue
+            if snippet_image.mean() == 255:
+                print('Skipped a snippet which was all white')
+                continue
 
-                snippet_image_path, snippet_mask_path = _get_cache_paths(snippet_height, snippet_width, label_groups, snippet_number)
-                if os.path.isfile(snippet_image_path) and os.path.isfile(snippet_mask_path):
-                    snippet_number += 1
-                    print('Snippet already exists!')
-                    continue
+            snippet_image_path, snippet_mask_path = _get_cache_paths(snippet_height, snippet_width, label_groups, snippet_number)
+            if os.path.isfile(snippet_image_path) and os.path.isfile(snippet_mask_path):
+                snippet_number += 1
+                print('Snippet already exists!')
+                continue
 
+            cv2.imshow('Mask snippet before relabeling', cv2.resize(snippet_mask, (snippet_mask.shape[1] // downsampling_factor, snippet_mask.shape[0] // downsampling_factor)))
 
-                if label_groups == [[-1]]:
-                    staff_lines = [row_index for row_index in range(snippet_mask.shape[0]) if snippet_image[row_index].mean() < 127]  
-                    for index, _ in np.ndenumerate(snippet_mask):
-                        snippet_mask[index] = 1 if snippet_image[index] == 0 and index[0] in staff_lines else 0
-                else:
-                    class_map = defaultdict(lambda: 0)
-                    for label_group_id, label_group in enumerate(label_groups):
-                        for label in label_group:
-                            class_map[label] = label_group_id + 1
+            if label_groups == [[-1]]:
+                staff_lines = [row_index for row_index in range(snippet_mask.shape[0]) if snippet_image[row_index].mean() < 127]  
+                for index, _ in np.ndenumerate(snippet_mask):
+                    snippet_mask[index] = 1 if snippet_image[index] == 0 and index[0] in staff_lines else 0
+            else:
+                class_map = defaultdict(lambda: 0)
+                for label_group_id, label_group in enumerate(label_groups):
+                    for label in label_group:
+                        class_map[label] = label_group_id + 1
 
-                    for index, value in np.ndenumerate(snippet_mask):
-                        snippet_mask[index] = class_map[value]
+                for index, value in np.ndenumerate(snippet_mask):
+                    snippet_mask[index] = class_map[value]
 
                 snippet_mask = cv2.resize(snippet_mask, (snippet_mask.shape[1] // downsampling_factor, snippet_mask.shape[0] // downsampling_factor))
                 snippet_mask = cv2.normalize(snippet_mask, None, alpha=0, beta=1, norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_32F)

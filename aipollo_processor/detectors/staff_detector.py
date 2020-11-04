@@ -4,7 +4,7 @@ import utils
 import torch
 import cv2
 
-class StaffLineDetector:
+class StaffDetector:
 
     def __init__(self):
         self._nn = unet_torch.models.UNet()
@@ -16,7 +16,9 @@ class StaffLineDetector:
 
 
     def detect(self, image):
-        # Find staffs in unscaled image to estimate staff height.
+        # Find staffs in image that is not optimally scaled yet since we do not know staff height. Try to detect staff height in that image.
+        resize_to_height = 1024
+        image = cv2.resize(image, (round(image.shape[1] * (resize_to_height / image.shape[0])), resize_to_height))
         staffs = self._detect(image)
         if not staffs:
             return []
@@ -69,6 +71,24 @@ class StaffLineDetector:
 
         lines = sorted(lines, key=lambda line: line[1], reverse=True)
         best_line = lines[0][0]
+        
+        ''' 
+        # Alternative version to find a first best line
+        lines = []
+        for skew in range(round(-image.shape[0] * 0.02), round(image.shape[0] * 0.02), 2):
+            for start_y in range(max(0, -skew) + image.shape[0] // 4, image.shape[0] // 2):
+                point1, point2 = (start_y, 0), (start_y + skew, image.shape[1] - 1)
+
+                # Walk along line throughout the entire image and note the sum of the pixel values in the image along this line.
+                line = utils.get_line(point1, point2, mask.shape[0], mask.shape[1])
+                line_pixel_sum = sum(mask[y][x] for y, x in line)
+
+                lines.append((line, line_pixel_sum))
+            
+        lines = sorted(lines, key=lambda line: line[1], reverse=True)
+        best_line = lines[0][0]
+        '''
+
 
         # Find other lines by shifting the one line we found.
         line_candidates = []

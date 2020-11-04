@@ -8,14 +8,14 @@
             "name": "Python: Train UNet",
             "type": "python",
             "request": "launch",
-            "program": "aipollo_processor/detectors/unet_torch/unet-torch.py",
+            "program": "aipollo_processor/score_analyzer.py",
             "console": "integratedTerminal"
         },
         {
             "name": "Python: Staff line detector test",
             "type": "python",
             "request": "launch",
-            "program": "aipollo_processor/detectors/staff_line_detector_test.py",
+            "program": "aipollo_processor/detectors/staff_detector_test.py",
             "console": "integratedTerminal"
         },
         {
