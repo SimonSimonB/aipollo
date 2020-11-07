@@ -1,6 +1,6 @@
 import unittest
 import cv2
-import staff_detector 
+from . import staff_detector 
 
 class StaffDetectorTest(unittest.TestCase):
 

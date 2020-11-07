@@ -1,14 +1,17 @@
+from aipollo_processor.detectors import geometry_utils
 import random
-import unet_torch.models
-import utils
+from aipollo_processor.detectors.unet_torch import models
+from . import utils
 import torch
 import cv2
+import os.path
 
 class StaffDetector:
 
     def __init__(self):
-        self._nn = unet_torch.models.UNet()
-        self._nn.load_state_dict(torch.load('aipollo_processor/detectors/unet_torch/logs/[-1]--2020-10-29-18.37.07/4500.pt'))
+        self._nn = models.UNet()
+        model_path = str(os.path.join(utils.MODELS_DIR, r'[-1]--2020-10-29-18.37.07\4500.pt'))
+        self._nn.load_state_dict(torch.load(model_path))
         self._nn.eval()
         torch.no_grad()
 
@@ -33,7 +36,7 @@ class StaffDetector:
         staffs = self._detect(image)
         print(f'Found {len(staffs)} staffs.')
 
-        return staffs
+        return staffs, staff_height
 
 
     def _detect(self, image):
@@ -49,8 +52,18 @@ class StaffDetector:
         mask[mask <= threshold] = 0.0
         utils.show(mask)
 
+        '''
+        # Create default Fast Line Detector class
+        fld = cv2.ximgproc.createFastLineDetector()
+        # Get line vectors from the image
+        lines = fld.detect(mask)
+        # Draw lines on the image
+        line_on_image = fld.drawSegments(image, lines)
+        # Plot
+        utils.show(line_on_image)
+        '''
+
         # Find one really good line by fitting lines through pixels in the same connected component in the mask.
-        # TODO Can probably speed that up by much by just randomly shifting lines across the image. 
         connected_components = utils.get_connected_components(mask)
         connected_components = sorted(connected_components, key=lambda connected_component: len(connected_component), reverse=True)
         lines = []
@@ -61,7 +74,7 @@ class StaffDetector:
                 point1, point2 = random.sample(connected_component, 2)
 
                 # Walk along line throughout the entire image and note the sum of the pixel values in the image along this line.
-                line = utils.get_line(point1, point2, mask.shape[0], mask.shape[1])
+                line = geometry_utils.get_line(point1, point2, mask.shape[0], mask.shape[1])
                 line_pixel_sum = sum(mask[y][x] for y, x in line)
 
                 line_candidates.append((line, line_pixel_sum))
@@ -93,7 +106,7 @@ class StaffDetector:
         # Find other lines by shifting the one line we found.
         line_candidates = []
         for shift in range(-best_line[0][0], mask.shape[0] - best_line[0][0]):
-            line_candidate = utils.get_line((best_line[0][0] + shift, best_line[0][1]), (best_line[-1][0] + shift, best_line[-1][1]), mask.shape[0], mask.shape[1])
+            line_candidate = geometry_utils.get_line((best_line[0][0] + shift, best_line[0][1]), (best_line[-1][0] + shift, best_line[-1][1]), mask.shape[0], mask.shape[1])
             line_candidate_pixel_sum = sum(mask[y][x] for y, x in line_candidate)
             line_candidates.append([line_candidate, line_candidate_pixel_sum])
 

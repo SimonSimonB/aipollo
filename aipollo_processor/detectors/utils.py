@@ -5,6 +5,9 @@ import string
 import cv2
 import collections
 import torch
+import pathlib
+
+MODELS_DIR = r'C:/Users/simon/Coding/ML/aipollo/aipollo_processor/detectors/unet_torch/logs'
 
 Tile = collections.namedtuple('Tile', 'data start_y start_x')
 def image_to_tiles(image, tile_height=512, tile_width=512):
@@ -27,6 +30,8 @@ def image_to_tiles(image, tile_height=512, tile_width=512):
 
     return tiles
 
+#def get_bounding_box(points):
+
 
 def classify(image, model):
     image = cv2.normalize(image, None, alpha=0, beta=1, norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_32F)
@@ -47,24 +52,6 @@ def show(mask, window_title=None):
     cv2.imshow(window_title, mask)
     cv2.waitKey(1)
 
-def get_line(point1, point2, height, width):
-    if point1[1] == point2[1]: 
-        return [(y, point1[1]) for y in range(height)]
-
-    if point2[1] < point1[1]:
-        point1, point2 = point2, point1
-    
-    slope = (point2[0] - point1[0]) / (point2[1] - point1[1])
-    intersect = (point1[0] - point1[1] * slope)
-
-    line = []
-    for x in range(width):
-        y = round(intersect + slope * x)
-
-        if 0 <= y < height:
-            line.append((y, x))
-    
-    return line
 
 def get_connected_components(arr):
 

@@ -1,11 +1,18 @@
+from aipollo_processor.detectors import half_note_detector
 import django
+from aipollo_processor import score_analyzer
+import cv2
 
 
 def index(request):
-    template = django.template.loader.get_template('scoreanalyzer/index.html')
-    staffs = score_analyzer.analyze_score
+    template = django.template.loader.get_template('./scoreanalyzer/analyzer.html')
+
+    # Debug: load sheet music scan from disk.
+    image = cv2.imread('../sample_scans/bleib_rotated.jpg', cv2.IMREAD_GRAYSCALE)
+    staffs, half_notes = score_analyzer.analyze_score(image)
     context = {
-        'staffs': staffs
+        'staffs': staffs,
+        'half_notes': half_notes,
     }
     return django.http.HttpResponse(template.render(context, request))
     

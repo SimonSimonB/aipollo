@@ -4,18 +4,35 @@
     // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
     "version": "0.2.0",
     "configurations": [
+        {
+            "name": "Python: Test driver",
+            "type": "python",
+            "request": "launch",
+            "program": "test_driver.py",
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "Django",
+            "type": "python",
+            "request": "launch",
+            "stopOnEntry": false,
+            "program": "${workspaceRoot}/aipollo_web/manage.py",
+            "args": [
+                "runserver",
+                "--noreload"
+            ],
+            "debugOptions": [
+                "WaitOnAbnormalExit",
+                "WaitOnNormalExit",
+                "RedirectOutput",
+                "DjangoDebugging"
+            ]
+        }, 
         {   
             "name": "Python: Train UNet",
             "type": "python",
             "request": "launch",
             "program": "aipollo_processor/score_analyzer.py",
-            "console": "integratedTerminal"
-        },
-        {
-            "name": "Python: Staff line detector test",
-            "type": "python",
-            "request": "launch",
-            "program": "aipollo_processor/detectors/staff_detector_test.py",
             "console": "integratedTerminal"
         },
         {

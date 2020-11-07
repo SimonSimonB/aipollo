@@ -1,18 +1,25 @@
+import cv2
 #import ScoreModel
-from detectors.unet_torch import unet_torch_manager
-import score_model
-
+from aipollo_processor.detectors.unet_torch import unet_torch_manager
+from aipollo_processor.detectors.staff_detector import StaffDetector
+from aipollo_processor.detectors.half_note_detector import HalfNoteDetector
 
 object_detectors = []
 
 def analyze_score(image):
-    score_elements = []
-    for object_detector in object_detectors:
-        object_detector.detect(image)
+    '''Returns 
+    '''
 
-    score_model = score_model.ScoreModel(score_elements)
+    print('Start detecting staffs...')
+    staffs, staff_height = StaffDetector().detect(image)
+    print('Done.')
+    print('Start detecting half notes...')
+    half_notes = HalfNoteDetector().detect(image, staff_height)
+    print('Done.')
 
-    return score_model
+    return [staffs, half_notes]
 
 if __name__ == '__main__':
-    unet_torch_manager.train_net([[9]])
+    image = cv2.imread('../sample_scans/bleib_rotated.jpg', cv2.IMREAD_GRAYSCALE)
+    analyze_score(image)
+    #unet_torch_manager.train_net([[36]])

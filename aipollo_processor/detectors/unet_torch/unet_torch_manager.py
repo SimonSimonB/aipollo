@@ -5,9 +5,9 @@ import torch.optim
 import torch
 import math
 
-from detectors.unet_torch import models
-from detectors.unet_torch import transforms
-from detectors.unet_torch import data
+from . import models
+from . import transforms
+from . import data
 import datetime
 import pathlib
 
@@ -23,13 +23,13 @@ def train_net(label_groups):
     IMAGE_WIDTH = 512
     weight_foreground_factor = None
     batch_size = 4
-    validation_interval = 1500
-    save_interval = 1500
+    validation_interval = 500
+    save_interval = 500
 
 
     model = models.UNet()
     log_path = pathlib.Path('./aipollo_processor/detectors/unet_torch/logs/' + '-'.join([str(label_group) for label_group in label_groups]) + '--' + datetime.datetime.now().strftime('%Y-%m-%d-%H.%M.%S'))
-    model.load_state_dict(torch.load('aipollo_processor/detectors/unet_torch/logs/[-1]--2020-10-29-18.37.07/1500.pt'))
+    model.load_state_dict(torch.load('aipollo_processor/detectors/unet_torch/logs/[36]--2020-11-04-19.06.47/1400.pt'))
 
     criterion = torch.nn.BCELoss()
     optimizer = torch.optim.Adam(model.parameters())
@@ -115,11 +115,3 @@ def train_net(label_groups):
             if instances_seen % ((save_interval // batch_size) * batch_size) == 0:
                 log_path.mkdir(parents=True, exist_ok=True)
                 torch.save(model.state_dict(), str(log_path / f'{instances_seen}.pt'))
-
-                
-
-if __name__ == '__main__':
-    #cProfile.run('train_net()')
-    write_dataset_to_disk()
-    #train_net()
-
