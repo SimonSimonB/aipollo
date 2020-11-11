@@ -1,3 +1,4 @@
+from aipollo_processor.detectors.geometry_utils import Point
 from aipollo_processor.score_elements import ScoreElement, ScoreElementType
 from aipollo_processor.detectors import geometry_utils
 import random
@@ -23,6 +24,7 @@ class StaffDetector:
         # Find staffs in image that is not optimally scaled yet since we do not know staff height. Try to detect staff height in that image.
         resize_to_height = 1024
         resize_factor = resize_to_height / image.shape[0]
+        original_shape = image.shape
         image = cv2.resize(image, (round(image.shape[1] * resize_factor), round(image.shape[0] * resize_factor)))
         staffs = self._detect(image)
         if not staffs:
@@ -36,11 +38,15 @@ class StaffDetector:
         # Detect staffs again.
         #staffs = self._detect(image)
 
-        # Convert staffs back.
+        # Convert detected staffs to the dimensions of the original image.
         staffs = [
             [ScoreElement(
                 ScoreElementType.staff_line, 
-                [(1 / resize_factor) * pixel for pixel in staff_line.pixels])
+                geometry_utils.get_line(
+                    (1 / resize_factor) * staff_line.pixels[0], 
+                    (1 / resize_factor) * staff_line.pixels[-1],
+                    original_shape[0],
+                    original_shape[1]))
                 for staff_line in staff
             ]
             for staff in staffs
@@ -135,13 +141,31 @@ class StaffDetector:
 
         # Merge nearby lines. TODO Rewrite this so that line is at center of previous lines.
         lines_and_scores = sorted(lines_and_scores, key=lambda line: line[0][0].y) 
+        current_line_group = []
+        line_groups = []
         i = 0
         while i < len(lines_and_scores) - 1:
-            if lines_and_scores[i + 1][0][0].y - lines_and_scores[i][0][0].y < 3:
-                lines_and_scores[i][1] += lines_and_scores[i + 1][1]
-                del lines_and_scores[i+1]
-            else:
-                i += 1
+            current_line_group.append(lines_and_scores[i])
+            if lines_and_scores[i + 1][0][0].y - lines_and_scores[i][0][0].y > 3:
+                line_groups.append(current_line_group)
+                current_line_group = []
+
+            i += 1
+        else:
+            current_line_group.append(lines_and_scores[i])
+            line_groups.append(current_line_group)
+        
+        lines_and_scores = []
+        for line_group in line_groups:
+            # Compute the averaged line.
+            start_x = max(line_and_score[0][0].x for line_and_score in line_group)
+            end_x = min(line_and_score[0][-1].x for line_and_score in line_group)
+            line = []
+            for i in range(end_x - start_x + 1):
+                line.append(Point(sum(line_and_score[0][i].y for line_and_score in line_group) / len(line_group), start_x + i))
+
+            score = sum(line_and_score[1] for line_and_score in line_group)
+            lines_and_scores.append((line, score))
 
         # Debug: plot lines
         mask_with_lines = mask.copy()
