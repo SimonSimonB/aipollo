@@ -8,3 +8,4 @@ aipollo_processor/detectors/rnn/checkpoints/
 aipollo_processor/detectors/rnn/tf_crnn/
 aipollo_processor/detectors/unet-tf/
 sample_scans/
+foobar.png

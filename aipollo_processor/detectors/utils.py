@@ -1,3 +1,6 @@
+from typing import Iterable
+from aipollo_processor.score_elements import ScoreElement, ScoreElementType
+from aipollo_processor.detectors.geometry_utils import Point
 import queue
 import numpy as np
 import random
@@ -50,7 +53,25 @@ def show(mask, window_title=None):
         window_title = ''.join(random.choice(string.ascii_uppercase))
 
     cv2.imshow(window_title, mask)
+    cv2.imwrite('foobar.png', mask)
     cv2.waitKey(1)
+
+def draw_score_annotations(score_image, score_elements: Iterable[ScoreElement]):
+    score_image = cv2.cvtColor(score_image, cv2.COLOR_GRAY2RGB)
+    '''
+    score_image_copy = np.zeros(dtype='uint8', shape=(score_image.shape[0], score_image.shape[1], 3))
+    score_image_copy[:, :, 0] = (80 * score_image).astype('uint8')
+    score_image_copy[:, :, 1] = (80 * score_image).astype('uint8')
+    score_image_copy[:, :, 2] = (80 * score_image).astype('uint8')
+    del score_image
+    '''
+
+    color_map = {ScoreElementType.staff_line: (255, 0, 0), ScoreElementType.half_note: (0, 255, 0)}
+    for score_element in score_elements:
+        for pixel in score_element.pixels:
+            score_image[pixel.y][pixel.x] = color_map[score_element.type]
+    
+    show(score_image)
 
 def draw_line_segments(image, line_segments):
     image_with_lines = image.copy()
@@ -61,45 +82,5 @@ def draw_line_segments(image, line_segments):
             image_with_lines[point.y][point.x] = 255
     
     return image_with_lines
-
-
-
-def get_connected_components(arr):
-
-    def _dfs(arr, y, x, visited):
-        visited[y][x] = True
-        component = [(y, x)]
-        on_neighbors = [(n_y, n_x) for n_x in [x - 1, x + 1] for n_y in [y - 1, y + 1] 
-                            if 0 <= n_y < visited.shape[0] and 0 <= n_x < visited.shape[1] and not visited[n_y][n_x] and arr[n_y][n_x] == 1]
-
-        for neighbor in on_neighbors:
-            component.extend(_dfs(arr, neighbor[0], neighbor[1], visited))
-
-        return component
-
-    discovered = np.zeros_like(arr, dtype=bool)
-    components = []
-
-    for start_y in range(arr.shape[0]):
-        for start_x in range(arr.shape[1]):
-            if arr[start_y][start_x] == 1.0 and not discovered[start_y][start_x]:
-                component = []
-                q = queue.Queue()
-                q.put((start_y, start_x))
-                discovered[(start_y, start_x)] = True
-
-                while not q.empty():
-                    y, x = q.get()
-                    component.append((y, x))
-                    neighbors = [(max(0, y - 1), x), (min(y + 1, discovered.shape[0] - 1), x), (y, max(0, x - 1)), (y, min(x + 1, discovered.shape[1] - 1))]
-
-                    for (n_y, n_x) in neighbors:
-                        if not discovered[n_y][n_x] and arr[n_y][n_x] == 1:
-                            discovered[(n_y, n_x)] = True
-                            q.put((n_y, n_x))
-
-                components.append(component)
-    
-    return components
 
 

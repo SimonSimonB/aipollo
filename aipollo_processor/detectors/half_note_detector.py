@@ -1,4 +1,6 @@
 import os
+
+from numpy.core.fromnumeric import resize
 from aipollo_processor.score_elements import ScoreElement, ScoreElementType
 from . import utils
 from .unet_torch import models
@@ -24,6 +26,15 @@ class HalfNoteDetector:
 
         # Detect half notes.
         half_notes = self._detect(image, staff_height)
+
+        # Resize them to the original height of the image.
+        half_notes = [
+            ScoreElement(
+                ScoreElementType.half_note, 
+                [(1 / resize_factor) * point for point in half_note.pixels]
+            ) for half_note in half_notes
+        ]
+
         print(f'Found {len(half_notes)} half notes.')
 
         return half_notes
@@ -42,7 +53,7 @@ class HalfNoteDetector:
         mask[mask <= threshold] = 0.0
         utils.show(mask)
 
-        connected_components = utils.get_connected_components(mask)
+        connected_components = geometry_utils.get_connected_components(mask)
         connected_components = sorted(connected_components, key=lambda connected_component: len(connected_component), reverse=True)
 
         # Throw away small connected components.
@@ -91,7 +102,7 @@ class HalfNoteDetector:
         # Debug: plot bounding boxes
         mask_with_boxes = mask.copy()
         for half_note in half_notes:
-            bounding_box = geometry_utils.get_bounding_box(half_note.pixels))
+            bounding_box = geometry_utils.get_bounding_box(half_note.pixels)
             for point in geometry_utils.get_line_segment(bounding_box[0], bounding_box[1]):
                 mask_with_boxes[point.y][point.x] = 1.0
         utils.show(mask_with_boxes, 'Bounding boxes')

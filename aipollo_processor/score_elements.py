@@ -13,6 +13,7 @@ Note = collections.namedtuple('Note', 'center_position bounding_box pitch durati
 class ScoreElementType(enum.Enum):
     staff = 0
     half_note = 1
+    staff_line = 2
 
 class ScoreElement:
     def __init__(self, element_type: ScoreElementType, pixels: List[geometry_utils.Point]):

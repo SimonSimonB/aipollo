@@ -21,12 +21,6 @@
                 "runserver",
                 "--noreload"
             ],
-            "debugOptions": [
-                "WaitOnAbnormalExit",
-                "WaitOnNormalExit",
-                "RedirectOutput",
-                "DjangoDebugging"
-            ]
         }, 
         {   
             "name": "Python: Train UNet",
