@@ -52,6 +52,17 @@ def show(mask, window_title=None):
     cv2.imshow(window_title, mask)
     cv2.waitKey(1)
 
+def draw_line_segments(image, line_segments):
+    image_with_lines = image.copy()
+    image_with_lines //= 2
+
+    for line_segment in line_segments:
+        for point in line_segment:
+            image_with_lines[point.y][point.x] = 255
+    
+    return image_with_lines
+
+
 
 def get_connected_components(arr):
 

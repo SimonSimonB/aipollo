@@ -11,7 +11,7 @@ class HalfNoteDetector:
 
     def __init__(self):
         self._nn = models.UNet()
-        self._nn.load_state_dict(torch.load(os.path.join(utils.MODELS_DIR, r'aipollo_processor/detectors/unet_torch/logs/[36]--2020-11-05-15.07.33/3000.pt')))
+        self._nn.load_state_dict(torch.load(os.path.join(utils.MODELS_DIR, r'[36]--2020-11-05-15.07.33/3000.pt')))
         self._nn.eval()
         torch.no_grad()
 
@@ -49,18 +49,13 @@ class HalfNoteDetector:
         connected_components = [connected_component for connected_component in connected_components if len(connected_component) > 10]
 
         # Compute bounding boxes for the components.
-        bounding_boxes = []
-        for connected_component in connected_components:
-            bounding_boxes.append((
-                Point(min(point[0] for point in connected_component), min(point[1] for point in connected_component)),
-                Point(max(point[0] for point in connected_component), max(point[1] for point in connected_component))
-            ))
+        bounding_boxes = [geometry_utils.get_bounding_box(connected_component) for connected_component in connected_components]
 
         # Debug: plot bounding boxes
         mask_with_boxes = mask.copy()
         for bounding_box in bounding_boxes:
-            for y, x in geometry_utils.get_line_segment(bounding_box[0], bounding_box[1]):
-                mask_with_boxes[y][x] = 1.0
+            for point in geometry_utils.get_line_segment(bounding_box[0], bounding_box[1]):
+                mask_with_boxes[point.y][point.x] = 1.0
         utils.show(mask_with_boxes)
 
         # Compute size of bounding box of a single half note, based on the staff height.
@@ -83,13 +78,6 @@ class HalfNoteDetector:
         bounding_boxes = [bounding_box for i, bounding_box in enumerate(bounding_boxes) if i not in indices_to_delete]
         bounding_boxes.extend(new_boxes)
         
-        # Debug: plot bounding boxes
-        mask_with_boxes = mask.copy()
-        for bounding_box in bounding_boxes:
-            for y, x in geometry_utils.get_line_segment(bounding_box[0], bounding_box[1]):
-                mask_with_boxes[y][x] = 1.0
-        utils.show(mask_with_boxes, 'Bounding boxes split')
-
         # Extract pixels for each bounding box.
         half_notes = []
         for bounding_box in bounding_boxes:
@@ -99,6 +87,14 @@ class HalfNoteDetector:
                 if mask[y][x] == 1.0
             ]
             half_notes.append(ScoreElement(ScoreElementType.half_note, pixels))
+
+        # Debug: plot bounding boxes
+        mask_with_boxes = mask.copy()
+        for half_note in half_notes:
+            bounding_box = geometry_utils.get_bounding_box(half_note.pixels))
+            for point in geometry_utils.get_line_segment(bounding_box[0], bounding_box[1]):
+                mask_with_boxes[point.y][point.x] = 1.0
+        utils.show(mask_with_boxes, 'Bounding boxes')
 
         return half_notes
 
