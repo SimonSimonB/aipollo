@@ -1,3 +1,5 @@
+from aipollo_processor.detectors.geometry_utils import Point
+import xml.etree.ElementTree 
 from collections import defaultdict
 import random
 import tqdm
@@ -16,7 +18,7 @@ if COLAB:
 deepscore_path = pathlib.Path('./drive/My Drive/Privates/Coding/aipollo/data/deep_scores_dense_extended') if COLAB else pathlib.Path('C:/Users/simon/Google Drive/Privates/Coding/aipollo/data/deep_scores_dense_extended')
 cache_path = pathlib.Path('C:/Users/simon/Coding/ML/aipollo/aipollo_processor/detectors/unet_torch/data/')
 
-def write_to_disk(snippet_height, snippet_width, label_groups, downsampling_factor=3, skip_empty=True):
+def write_to_disk(snippet_height, snippet_width, label_groups, downsampling_factor=3):
     snippet_number = 0
     for image_name in tqdm.tqdm(os.listdir(str(deepscore_path / 'images_png'))):
         image_filename = str(deepscore_path / 'images_png') + '/' + image_name
@@ -24,7 +26,9 @@ def write_to_disk(snippet_height, snippet_width, label_groups, downsampling_fact
         score_image = cv2.imread(image_filename, cv2.IMREAD_GRAYSCALE)
         mask = cv2.imread(mask_filename, cv2.IMREAD_GRAYSCALE)
 
-        score_image_tiles = utils.image_to_tiles(score_image, tile_height=downsampling_factor * snippet_height, tile_width=downsampling_factor * snippet_width)
+        tile_height = downsampling_factor * snippet_height
+        tile_width = downsampling_factor * snippet_width
+        score_image_tiles = utils.image_to_tiles(score_image, tile_height=tile_height, tile_width=tile_width)
         mask_tiles = utils.image_to_tiles(mask, tile_height=downsampling_factor * snippet_height, tile_width=downsampling_factor * snippet_width)
 
         for score_image_tile, mask_tile in zip(score_image_tiles, mask_tiles):
@@ -47,6 +51,54 @@ def write_to_disk(snippet_height, snippet_width, label_groups, downsampling_fact
                 staff_lines = [row_index for row_index in range(snippet_mask.shape[0]) if snippet_image[row_index].mean() < 127]  
                 for index, _ in np.ndenumerate(snippet_mask):
                     snippet_mask[index] = 1 if snippet_image[index] == 0 and index[0] in staff_lines else 0
+            elif label_groups == [[34, 'quarter']] or label_groups == [[34, 'eigth']]:
+                requested_duration = {'quarter': 4, 'eigth': 8}[label_groups[0][1]]
+                snippet_mask_new = np.zeros_like(snippet_mask)
+                # Open XML annotations to find out where the quarter note heads are.
+                xml_path = str(deepscore_path / 'xml_annotations') + '/' + image_name[:-4] + '.xml' 
+                tree = xml.etree.ElementTree.parse(xml_path)
+
+                for element in tree.getroot().iter('object'):
+                    children = list(element.iter())
+
+                    name_elements = [child for child in children if child.tag == 'name']
+                    if len(name_elements) == 0 or name_elements[0].text != 'noteheadBlack':
+                        continue
+
+                    duration_string = [child for child in children if child.tag == 'duration'][0].text
+                    try:
+                        duration = float(duration_string)
+                    except ValueError:
+                        continue
+                    if duration != requested_duration:
+                        continue
+
+                    bndbox_elements = [child for child in children if child.tag == 'bndbox']
+                    if len(bndbox_elements) == 0:
+                        continue
+
+                    bndbox_element = bndbox_elements[0]
+                    ymin = float(bndbox_element.find('ymin').text) * mask.shape[0]
+                    ymax = float(bndbox_element.find('ymax').text) * mask.shape[0]
+                    xmin = float(bndbox_element.find('xmin').text) * mask.shape[1]
+                    xmax = float(bndbox_element.find('xmax').text) * mask.shape[1]
+                    top_left = Point(ymin, xmin)
+                    bottom_right = Point(ymax, xmax)
+
+                    #TODO: Could check here whether there is an object with name 'augmentationDot' close to the right, and if so, skip.
+
+                    if(
+                        (top_left.y >= mask_tile.start_y) and 
+                        (bottom_right.y < mask_tile.start_y + tile_height) and
+                        (top_left.x >= mask_tile.start_x) and 
+                        (bottom_right.x < mask_tile.start_x + tile_width)):
+                        for y in range(top_left.y - mask_tile.start_y, bottom_right.y - mask_tile.start_y):
+                            for x in range(top_left.x - mask_tile.start_x, bottom_right.x - mask_tile.start_x):
+                                if snippet_mask[y][x] > 0:
+                                    snippet_mask_new[y][x] = 1
+                    
+                snippet_mask = snippet_mask_new
+
             else:
                 class_map = defaultdict(lambda: 0)
                 for label_group_id, label_group in enumerate(label_groups):
@@ -56,26 +108,26 @@ def write_to_disk(snippet_height, snippet_width, label_groups, downsampling_fact
                 for index, value in np.ndenumerate(snippet_mask):
                     snippet_mask[index] = class_map[value]
 
-                snippet_mask = cv2.resize(snippet_mask, (snippet_mask.shape[1] // downsampling_factor, snippet_mask.shape[0] // downsampling_factor))
-                snippet_mask = cv2.normalize(snippet_mask, None, alpha=0, beta=1, norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_32F)
+            snippet_mask = cv2.resize(snippet_mask, (snippet_mask.shape[1] // downsampling_factor, snippet_mask.shape[0] // downsampling_factor))
+            snippet_mask = cv2.normalize(snippet_mask, None, alpha=0, beta=1, norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_32F)
 
-                snippet_image = cv2.normalize(snippet_image, None, alpha=0, beta=1, norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_32F)
-                snippet_image = cv2.resize(snippet_image, (snippet_image.shape[1] // downsampling_factor, snippet_image.shape[0] // downsampling_factor))
-                snippet_image = snippet_image.reshape(1, snippet_image.shape[0], snippet_image.shape[1])
+            snippet_image = cv2.normalize(snippet_image, None, alpha=0, beta=1, norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_32F)
+            snippet_image = cv2.resize(snippet_image, (snippet_image.shape[1] // downsampling_factor, snippet_image.shape[0] // downsampling_factor))
+            snippet_image = snippet_image.reshape(1, snippet_image.shape[0], snippet_image.shape[1])
 
-                cv2.imshow('Image snippet', snippet_image[0])
-                cv2.imshow('Mask snippet', snippet_mask)
-                cv2.waitKey(1)
+            cv2.imshow('Image snippet', snippet_image[0])
+            cv2.imshow('Mask snippet', snippet_mask)
+            cv2.waitKey(1)
 
-                if snippet_mask.mean() == 0.0:
-                    print('Skipped snippet which had no target class pixel')
-                    continue
+            if snippet_mask.mean() == 0.0:
+                print('Skipped snippet which had no target class pixel')
+                continue
 
-                pathlib.Path(_get_cache_base_path(snippet_height, snippet_width, label_groups)).mkdir(exist_ok=True, parents=True)
-                np.savez_compressed(snippet_image_path, snippet_image)
-                np.savez_compressed(snippet_mask_path, snippet_mask)
+            pathlib.Path(_get_cache_base_path(snippet_height, snippet_width, label_groups)).mkdir(exist_ok=True, parents=True)
+            np.savez_compressed(snippet_image_path, snippet_image)
+            np.savez_compressed(snippet_mask_path, snippet_mask)
 
-                snippet_number += 1
+            snippet_number += 1
         
 def _get_cache_base_path(snippet_height, snippet_width, label_groups):
     return str(cache_path / f'{snippet_height}x{snippet_width}--{"-".join([str(label) for subgroup in label_groups for label in subgroup])}')
@@ -83,6 +135,7 @@ def _get_cache_base_path(snippet_height, snippet_width, label_groups):
 def _get_cache_paths(snippet_height, snippet_width, label_groups, i):
     base_path = _get_cache_base_path(snippet_height, snippet_width, label_groups)
     return (base_path + f'/{i}_image.npz', base_path + f'/{i}_mask.npz') 
+
 
 class ScoreSnippetsDataset(torch.utils.data.Dataset):
 
