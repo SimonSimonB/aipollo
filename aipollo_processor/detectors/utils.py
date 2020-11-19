@@ -66,12 +66,25 @@ def draw_score_annotations(score_image, score_elements: Iterable[ScoreElement]):
     del score_image
     '''
 
-    color_map = {ScoreElementType.staff_line: (255, 0, 0), ScoreElementType.half_note: (0, 255, 0)}
-    for score_element in score_elements:
+    color_map = {
+        ScoreElementType.staff_line: (255, 0, 0), 
+        ScoreElementType.half_note: (0, 255, 0),
+        ScoreElementType.quarter_note: (0, 0, 255),
+    }
+
+    def _draw(score_element):
         for pixel in score_element.pixels:
             score_image[pixel.y][pixel.x] = color_map[score_element.type]
+        
+        for child in score_element.children:
+            _draw(child)
     
-    show(score_image)
+    for score_element in score_elements:
+        _draw(score_element)
+
+    show(score_image, window_title='Annotated score')
+    #cv2.imwrite('annotated_score.png', score_image)
+
 
 def draw_line_segments(image, line_segments):
     image_with_lines = image.copy()

@@ -51,8 +51,9 @@ class StaffDetector:
             ]
             for staff in staffs
         ]
+        staffs = [ScoreElement(ScoreElementType.staff, pixels=[], children=staff) for staff in staffs]
 
-        staff_height = sum(staff[4].pixels[0].y - staff[0].pixels[0].y for staff in staffs) / len(staffs)
+        staff_height = sum(staff.children[4].pixels[0].y - staff.children[0].pixels[0].y for staff in staffs) / len(staffs)
         print(f'Found {len(staffs)} staffs.')
 
         return staffs, staff_height

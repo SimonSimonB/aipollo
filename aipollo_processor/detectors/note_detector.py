@@ -9,12 +9,19 @@ import cv2
 from . import geometry_utils 
 from .geometry_utils import Point
 
-class HalfNoteDetector:
+class NoteDetector:
+
 
     def __init__(self):
-        self._nn = models.UNet()
-        self._nn.load_state_dict(torch.load(os.path.join(utils.MODELS_DIR, r'[36]--2020-11-05-15.07.33/3000.pt')))
-        self._nn.eval()
+        model_path = {
+            'half': r'[36]--2020-11-05-15.07.33/3000.pt',
+            'quarter': r"[34, 'quarter']--2020-11-17-17.48.24\10000.pt",
+        }
+
+        self._nn = {key: models.UNet() for key in model_path.keys()}
+        for note_type in self._nn.keys():
+            self._nn[note_type].load_state_dict(torch.load(os.path.join(utils.MODELS_DIR, model_path[note_type])))
+            self._nn[note_type].eval()
         torch.no_grad()
 
         self._detection_friendly_staff_height = 30
@@ -24,26 +31,28 @@ class HalfNoteDetector:
         resize_factor = self._detection_friendly_staff_height / staff_height
         image = cv2.resize(image, (round(image.shape[1] * resize_factor), round(image.shape[0] * resize_factor)))
 
-        # Detect half notes.
-        half_notes = self._detect(image, staff_height)
+        # Detect notes.
+        all_notes = []
+        for note_type, _ in self._nn.items():
+            notes = self._detect(image, note_type, staff_height)
 
-        # Resize them to the original height of the image.
-        half_notes = [
-            ScoreElement(
-                ScoreElementType.half_note, 
-                [(1 / resize_factor) * point for point in half_note.pixels]
-            ) for half_note in half_notes
-        ]
+            # Resize them to the original height of the image.
+            all_notes.extend([
+                ScoreElement(
+                    {'half': ScoreElementType.half_note, 'quarter': ScoreElementType.quarter_note}[note_type], 
+                    geometry_utils.get_convex_hull([(1 / resize_factor) * point for point in note.pixels])
+                ) for note in notes
+            ])
 
-        print(f'Found {len(half_notes)} half notes.')
+            print(f'Found {len(notes)} of type {note_type}.')
 
-        return half_notes
+        return all_notes
 
 
-    def _detect(self, image, staff_height):
+    def _detect(self, image, note_type, staff_height):
         utils.show(image)
         # Preprocess image (reshaping etc.)
-        mask = utils.classify(image, self._nn)
+        mask = utils.classify(image, self._nn[note_type])
         #utils.show(image)
         #utils.show(mask)
 

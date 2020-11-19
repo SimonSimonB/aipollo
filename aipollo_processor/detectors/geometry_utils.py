@@ -1,7 +1,9 @@
+import math
 import queue
 import numpy as np
 import collections
 import numbers
+import cv2
 from typing import Iterable
 
 class Point:
@@ -22,11 +24,34 @@ def get_line_segment(point1, point2):
         slope = (point2.y - point1.y) / (point2.x - point1.x)
         return [Point(point1.y + slope * (x - point1.x), x) for x in range(point1.x, point2.x + 1)]
 
+def get_rotated_bounding_box(pixels: Iterable[Point]):
+    raise NotImplementedError
+    #contour = np.array((p.x, p.y) for p in pixels).reshape((-1,1,2)).astype(np.int32)
+
 def get_bounding_box(pixels: Iterable[Point]):
-    return (
-        Point(min(point.y for point in pixels), min(point.x for point in pixels)),
-        Point(max(point.y for point in pixels), max(point.x for point in pixels))
-    )
+    if not pixels:
+        return []
+    else:
+        return (
+            Point(min(point.y for point in pixels), min(point.x for point in pixels)),
+            Point(max(point.y for point in pixels), max(point.x for point in pixels))
+        )
+
+def get_convex_hull(pixels: Iterable[Point]):
+    hull = cv2.convexHull(np.float32([[pixel.y, pixel.x] for pixel in pixels]))
+    hull = hull.reshape(-1, 2).astype(np.int32)
+    min_y, min_x = int(min(point[0] for point in hull)), int(min(point[1] for point in hull))
+    max_y, max_x = int(max(point[0] for point in hull)), int(max(point[1] for point in hull))
+
+    filled_hull = []
+    black_frame = np.zeros(shape=(math.ceil(max_y) + 1 - math.floor(min_y), math.ceil(max_x) + 1 - math.floor(min_x))).astype(np.uint8)
+    black_frame = cv2.fillConvexPoly(black_frame, np.array([[point[1] - min_x, point[0] - min_y] for point in hull]), 255)
+    for y in range(black_frame.shape[0]):
+        for x in range(black_frame.shape[1]):
+            if black_frame[y][x] == 255:
+                filled_hull.append(Point(y + min_y, x + min_x))
+
+    return filled_hull
 
 def get_connected_components(arr):
 
