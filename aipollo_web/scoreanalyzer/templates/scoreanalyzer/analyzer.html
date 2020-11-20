@@ -1,0 +1,88 @@
+{% load static %}
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/interact.js/1.10.0/interact.min.js"></script>
+
+<html>
+<head>
+    <link rel="stylesheet" type="text/css" href="{% static 'scoreanalyzer/style.css' %}">
+</head>
+<body>
+
+<div id="imagediv" style="position:absolute">
+  <img src="{% static 'scoreanalyzer/bleib_rotated.jpg' %}">
+</div>
+
+
+<script>
+    const scoreElementsJson = '{{ score_elements_json|safe }}';
+    const POINT_RADIUS = 1
+
+    // Create an HTML element for each ScoreElement.
+    var scoreElements = renderScoreElements(JSON.parse(scoreElementsJson));
+    var totalPositionChange = new WeakMap()
+    for (const scoreElementSvg of scoreElements)
+    {
+        totalPositionChange.set(scoreElementSvg, {x: 0, y: 0})
+    }
+
+    function renderScoreElements(scoreElementsJsonParsed)
+    {
+        var scoreElements = []
+        for (const scoreElement of scoreElementsJsonParsed)
+        {
+            // Ignore elements (and their children) that have no pixels.
+            if (scoreElement.pixels.length == 0)
+            {
+                continue;
+            }
+            var scoreElementSvg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+            scoreElementSvg.classList.add("draggable");
+            scoreElementSvg.classList.add("scoresymbol");
+
+            const minY = Math.min(...scoreElement.pixels.map(p => p.y));
+            const minX = Math.min(...scoreElement.pixels.map(p => p.x));
+            const maxY = Math.max(...scoreElement.pixels.map(p => p.y));
+            const maxX = Math.max(...scoreElement.pixels.map(p => p.x));
+
+            scoreElementSvg.setAttribute("height", maxY - minY);
+            scoreElementSvg.setAttribute("width", maxX - minX);
+            scoreElementSvg.style.top = minY;
+            scoreElementSvg.style.left = minX;
+
+            // Create a SVG circle for each pixel belonging to the score element.
+            for (const pixel of scoreElement.pixels)
+            {
+                var circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+                circle.setAttribute("cy", pixel.y - minY);
+                circle.setAttribute("cx", pixel.x - minX);
+                circle.setAttribute("r", POINT_RADIUS);
+                scoreElementSvg.appendChild(circle)
+            }
+
+            scoreElements.push(scoreElementSvg)
+            scoreElements.concat(renderScoreElements(scoreElement.children))
+            document.getElementById("imagediv").appendChild(scoreElementSvg);
+        }
+
+        return scoreElements
+    }
+
+    interact('.draggable').draggable({
+        listeners: {
+            start (event) {
+            console.log(event.type, event.target)
+        },
+        move (event) {
+            movedId = event.target;
+            totalPositionChange.get(movedId).x += event.dx;
+            totalPositionChange.get(movedId).y += event.dy;
+
+            event.target.style.transform =
+                `translate(${totalPositionChange.get(movedId).x}px, ${totalPositionChange.get(movedId).y}px)`
+        },
+        }
+    })
+
+</script>
+</body>
+</html>
