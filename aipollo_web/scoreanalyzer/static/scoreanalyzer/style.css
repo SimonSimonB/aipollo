@@ -1,3 +1,8 @@
+body {
+  margin: 0px;
+}
+
+
 .scoresymbol {
   position: absolute;
 }
@@ -5,4 +10,18 @@
 .draggable {
   touch-action: none;
   user-select: none;
+}
+
+#topheader {
+  display: flex;
+  flex-direction: row-reverse;
+  background-color: rgb(231, 231, 231);
+}
+
+.toplink {
+  color: #333333;
+  text-decoration: none;
+  font-size: large;
+  font-family: "Palatino Linotype", "Book Antiqua", Palatino, serif;
+  margin-right: 2%;
 }
