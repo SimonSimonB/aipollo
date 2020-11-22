@@ -1,16 +1,15 @@
 import os
-
-from numpy.core.fromnumeric import resize
-from aipollo_processor.score_elements import ScoreElement, ScoreElementType
-from . import utils
-from .unet_torch import models
 import torch
 import cv2
-from . import geometry_utils 
+
+from aipollo_omr.score_elements import ScoreElement, ScoreElementType
+from . import utils
+from .unet_torch import models
+from . import geometry_utils
 from .geometry_utils import Point
 
-class NoteDetector:
 
+class NoteDetector:
 
     def __init__(self):
         model_path = {
@@ -20,7 +19,9 @@ class NoteDetector:
 
         self._nn = {key: models.UNet() for key in model_path.keys()}
         for note_type in self._nn.keys():
-            self._nn[note_type].load_state_dict(torch.load(os.path.join(utils.MODELS_DIR, model_path[note_type])))
+            self._nn[note_type].load_state_dict(
+                torch.load(os.path.join(utils.MODELS_DIR,
+                                        model_path[note_type])))
             self._nn[note_type].eval()
         torch.no_grad()
 
@@ -29,7 +30,8 @@ class NoteDetector:
     def detect(self, image, staff_height):
         # Rescale image so that staff height equals detection-friendly staff height.
         resize_factor = self._detection_friendly_staff_height / staff_height
-        image = cv2.resize(image, (round(image.shape[1] * resize_factor), round(image.shape[0] * resize_factor)))
+        image = cv2.resize(image, (round(image.shape[1] * resize_factor),
+                                   round(image.shape[0] * resize_factor)))
 
         # Detect notes.
         all_notes = []
@@ -38,23 +40,24 @@ class NoteDetector:
 
             # Resize them to the original height of the image.
             all_notes.extend([
-                ScoreElement(
-                    {'half': ScoreElementType.half_note, 'quarter': ScoreElementType.quarter_note}[note_type], 
-                    geometry_utils.get_convex_hull([(1 / resize_factor) * point for point in note.pixels])
-                ) for note in notes
+                ScoreElement({
+                    'half': ScoreElementType.half_note,
+                    'quarter': ScoreElementType.quarter_note
+                }[note_type],
+                             geometry_utils.get_convex_hull([
+                                 (1 / resize_factor) * point
+                                 for point in note.pixels
+                             ]))
+                for note in notes
             ])
 
             print(f'Found {len(notes)} of type {note_type}.')
 
         return all_notes
 
-
     def _detect(self, image, note_type, staff_height):
         utils.show(image)
-        # Preprocess image (reshaping etc.)
         mask = utils.classify(image, self._nn[note_type])
-        #utils.show(image)
-        #utils.show(mask)
 
         # Threshold the pixel-wise classification
         threshold = 0.1
@@ -63,18 +66,28 @@ class NoteDetector:
         utils.show(mask)
 
         connected_components = geometry_utils.get_connected_components(mask)
-        connected_components = sorted(connected_components, key=lambda connected_component: len(connected_component), reverse=True)
+        connected_components = sorted(
+            connected_components,
+            key=lambda connected_component: len(connected_component),
+            reverse=True)
 
         # Throw away small connected components.
-        connected_components = [connected_component for connected_component in connected_components if len(connected_component) > 10]
+        connected_components = [
+            connected_component for connected_component in connected_components
+            if len(connected_component) > 10
+        ]
 
         # Compute bounding boxes for the components.
-        bounding_boxes = [geometry_utils.get_bounding_box(connected_component) for connected_component in connected_components]
+        bounding_boxes = [
+            geometry_utils.get_bounding_box(connected_component)
+            for connected_component in connected_components
+        ]
 
         # Debug: plot bounding boxes
         mask_with_boxes = mask.copy()
         for bounding_box in bounding_boxes:
-            for point in geometry_utils.get_line_segment(bounding_box[0], bounding_box[1]):
+            for point in geometry_utils.get_line_segment(
+                    bounding_box[0], bounding_box[1]):
                 mask_with_boxes[point.y][point.x] = 1.0
         utils.show(mask_with_boxes)
 
@@ -91,18 +104,24 @@ class NoteDetector:
                 num_new_boxes = round(bounding_box_height / half_note_height)
                 new_box_height = bounding_box_height / num_new_boxes
                 new_boxes.extend(
-                    (Point(bounding_box[0].y + j * new_box_height, bounding_box[0].x),
-                    Point(bounding_box[0].y + (j + 1) * new_box_height, bounding_box[1].x))
-                        for j in range(num_new_boxes))
-        
-        bounding_boxes = [bounding_box for i, bounding_box in enumerate(bounding_boxes) if i not in indices_to_delete]
+                    (Point(bounding_box[0].y +
+                           j * new_box_height, bounding_box[0].x),
+                     Point(bounding_box[0].y +
+                           (j + 1) * new_box_height, bounding_box[1].x))
+                    for j in range(num_new_boxes))
+
+        bounding_boxes = [
+            bounding_box for i, bounding_box in enumerate(bounding_boxes)
+            if i not in indices_to_delete
+        ]
         bounding_boxes.extend(new_boxes)
-        
+
         # Extract pixels for each bounding box.
         half_notes = []
         for bounding_box in bounding_boxes:
-            pixels = [Point(y, x) 
-                for y in range(bounding_box[0].y, bounding_box[1].y) 
+            pixels = [
+                Point(y, x)
+                for y in range(bounding_box[0].y, bounding_box[1].y)
                 for x in range(bounding_box[0].x, bounding_box[1].x)
                 if mask[y][x] == 1.0
             ]
@@ -112,34 +131,9 @@ class NoteDetector:
         mask_with_boxes = mask.copy()
         for half_note in half_notes:
             bounding_box = geometry_utils.get_bounding_box(half_note.pixels)
-            for point in geometry_utils.get_line_segment(bounding_box[0], bounding_box[1]):
+            for point in geometry_utils.get_line_segment(
+                    bounding_box[0], bounding_box[1]):
                 mask_with_boxes[point.y][point.x] = 1.0
         utils.show(mask_with_boxes, 'Bounding boxes')
 
         return half_notes
-
-        ''' 
-        # Alternative version to find a first best line
-        lines = []
-        for skew in range(round(-image.shape[0] * 0.02), round(image.shape[0] * 0.02), 2):
-            for start_y in range(max(0, -skew) + image.shape[0] // 4, image.shape[0] // 2):
-                point1, point2 = (start_y, 0), (start_y + skew, image.shape[1] - 1)
-
-                # Walk along line throughout the entire image and note the sum of the pixel values in the image along this line.
-                line = utils.get_line(point1, point2, mask.shape[0], mask.shape[1])
-                line_pixel_sum = sum(mask[y][x] for y, x in line)
-
-                lines.append((line, line_pixel_sum))
-            
-        lines = sorted(lines, key=lambda line: line[1], reverse=True)
-        best_line = lines[0][0]
-        '''
-
-       # Debug: plot lines
-        '''
-        mask_with_kept_notes = mask.copy()
-        for half_note in half_notes:
-            for (y, x) in line[0]:
-                mask_with_lines[y][x] = 1.0
-        utils.show(mask_with_lines)
-        '''

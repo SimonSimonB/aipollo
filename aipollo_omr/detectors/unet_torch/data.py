@@ -1,4 +1,4 @@
-from aipollo_processor.detectors.geometry_utils import Point
+from aipollo_omr.detectors.geometry_utils import Point
 import xml.etree.ElementTree 
 from collections import defaultdict
 import random
@@ -16,7 +16,7 @@ if COLAB:
 
 
 deepscore_path = pathlib.Path('./drive/My Drive/Privates/Coding/aipollo/data/deep_scores_dense_extended') if COLAB else pathlib.Path('C:/Users/simon/Google Drive/Privates/Coding/aipollo/data/deep_scores_dense_extended')
-cache_path = pathlib.Path('C:/Users/simon/Coding/ML/aipollo/aipollo_processor/detectors/unet_torch/data/')
+cache_path = pathlib.Path('C:/Users/simon/Coding/ML/aipollo/aipollo_omr/detectors/unet_torch/data/')
 
 def write_to_disk(snippet_height, snippet_width, label_groups, downsampling_factor=3):
     snippet_number = 0

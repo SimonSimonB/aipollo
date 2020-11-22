@@ -6,11 +6,19 @@
     "python.testing.unittestArgs": [
         "-v",
         "-s",
-        "./aipollo_processor",
+        "./aipollo_omr",
         "-p",
         "*_test.py"
     ],
     "python.testing.pytestEnabled": false,
     "python.testing.nosetestsEnabled": false,
     "python.testing.unittestEnabled": true,
+    "python.linting.enabled": true,
+    "python.linting.pylintPath": "pylint",
+    "python.linting.pylintEnabled": true,
+    "editor.formatOnSave": true,
+    "python.formatting.yapfArgs": [
+        "--style={based_on_style: google}"
+    ],
+    "python.formatting.provider": "yapf", // or "black" here
 }

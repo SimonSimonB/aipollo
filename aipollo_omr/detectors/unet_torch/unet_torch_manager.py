@@ -28,8 +28,8 @@ def train_net(label_groups):
 
 
     model = models.UNet()
-    log_path = pathlib.Path('./aipollo_processor/detectors/unet_torch/logs/' + '-'.join([str(label_group) for label_group in label_groups]) + '--' + datetime.datetime.now().strftime('%Y-%m-%d-%H.%M.%S'))
-    model.load_state_dict(torch.load('aipollo_processor/detectors/unet_torch/logs/[36]--2020-11-04-19.06.47/1400.pt'))
+    log_path = pathlib.Path('./aipollo_omr/detectors/unet_torch/logs/' + '-'.join([str(label_group) for label_group in label_groups]) + '--' + datetime.datetime.now().strftime('%Y-%m-%d-%H.%M.%S'))
+    model.load_state_dict(torch.load('./aipollo_omr/detectors/unet_torch/logs/[34, \'quarter\']--2020-11-17-17.48.24/10000.pt'))
 
     criterion = torch.nn.BCELoss()
     optimizer = torch.optim.Adam(model.parameters())

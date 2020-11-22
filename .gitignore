@@ -1,11 +1,9 @@
-aipollo_processor/logs/
+aipollo_omr/logs/
 __pycache__/
-aipollo_processor/detectors/rnn/data/
-aipollo_processor/detectors/rnntorch/data/
-aipollo_processor/detectors/unet_torch/data/
-aipollo_processor/detectors/unet_torch/logs/
-aipollo_processor/detectors/rnn/checkpoints/
-aipollo_processor/detectors/rnn/tf_crnn/
-aipollo_processor/detectors/unet-tf/
+old/
+aipollo_omr/detectors/unet_torch/data/
+aipollo_omr/detectors/unet_torch/logs/
+aipollo_web/scoreanalyzer/static/scoreanalyzer/debug_score_elements.json
 sample_scans/
 foobar.png
+test_driver.py

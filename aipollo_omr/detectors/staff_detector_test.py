@@ -1,18 +1,20 @@
 import unittest
 import cv2
-from . import staff_detector 
+from . import staff_detector
+
 
 class StaffDetectorTest(unittest.TestCase):
 
     def test_bleib_rotated(self):
-        image = cv2.imread('./sample_scans/bleib_rotated.jpg', cv2.IMREAD_GRAYSCALE)
+        image = cv2.imread('./sample_scans/bleib_rotated.jpg',
+                           cv2.IMREAD_GRAYSCALE)
         detector = staff_detector.StaffDetector()
         staffs = detector.detect(image)
         self.assertEqual(8, len(staffs))
 
-
     def test_bleib_rotated_erased(self):
-        image = cv2.imread('./sample_scans/bleib_rotated_erased.jpg', cv2.IMREAD_GRAYSCALE)
+        image = cv2.imread('./sample_scans/bleib_rotated_erased.jpg',
+                           cv2.IMREAD_GRAYSCALE)
         detector = staff_detector.StaffDetector()
         staffs = detector.detect(image)
         self.assertEqual(8, len(staffs))
@@ -28,6 +30,7 @@ class StaffDetectorTest(unittest.TestCase):
         detector = staff_detector.StaffDetector()
         staffs, staff_height = detector.detect(image)
         self.assertEqual(8, len(staffs))
+
 
 if __name__ == '__main__':
     unittest.main()

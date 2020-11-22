@@ -26,7 +26,7 @@
             "name": "Python: Train UNet",
             "type": "python",
             "request": "launch",
-            "program": "aipollo_processor/score_analyzer.py",
+            "program": "aipollo_omr/score_analyzer.py",
             "console": "integratedTerminal"
         },
         {
