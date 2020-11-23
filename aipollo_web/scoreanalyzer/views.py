@@ -1,5 +1,7 @@
+import os
 import django
 import cv2
+import jsonpickle
 
 from aipollo_omr import score_analyzer
 
@@ -18,7 +20,8 @@ def index(request):
     with open(path_to_json, 'r') as f:
         score_elements_json = f.read()
     # ELSE
-    #score_elements = score_analyzer.analyze_score(image)
+    #score_elements = score_analyzer.analyze_score(
+    #    image, os.environ.get('AIPOLLO_MODELS_DIR'))
     #score_elements_json = jsonpickle.encode(score_elements, unpicklable=False)
 
     context = {

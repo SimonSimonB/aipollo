@@ -11,11 +11,9 @@ import os.path
 
 class StaffDetector:
 
-    def __init__(self):
+    def __init__(self, models_dir):
         self._nn = models.UNet()
-        model_path = str(
-            os.path.join(utils.MODELS_DIR,
-                         r'[-1]--2020-10-29-18.37.07\4500.pt'))
+        model_path = str(os.path.join(models_dir, r'staffs.pt'))
         self._nn.load_state_dict(torch.load(model_path))
         self._nn.eval()
         torch.no_grad()

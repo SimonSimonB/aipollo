@@ -1,16 +1,12 @@
 from typing import Iterable
 from aipollo_omr.score_elements import ScoreElement, ScoreElementType
 from aipollo_omr.detectors.geometry_utils import Point
-import queue
 import numpy as np
 import random
 import string
 import cv2
 import collections
 import torch
-import pathlib
-
-MODELS_DIR = r'C:/Users/simon/Coding/ML/aipollo/aipollo_omr/detectors/unet_torch/logs'
 
 Tile = collections.namedtuple('Tile', 'data start_y start_x')
 

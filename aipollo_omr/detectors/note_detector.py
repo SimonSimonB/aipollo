@@ -11,17 +11,16 @@ from .geometry_utils import Point
 
 class NoteDetector:
 
-    def __init__(self):
+    def __init__(self, models_dir):
         model_path = {
-            'half': r'[36]--2020-11-05-15.07.33/3000.pt',
-            'quarter': r"[34, 'quarter']--2020-11-17-17.48.24\10000.pt",
+            'half': r'half_notes.pt',
+            'quarter': r"quarter_notes.pt",
         }
 
         self._nn = {key: models.UNet() for key in model_path.keys()}
         for note_type in self._nn.keys():
             self._nn[note_type].load_state_dict(
-                torch.load(os.path.join(utils.MODELS_DIR,
-                                        model_path[note_type])))
+                torch.load(os.path.join(models_dir, model_path[note_type])))
             self._nn[note_type].eval()
         torch.no_grad()
 
