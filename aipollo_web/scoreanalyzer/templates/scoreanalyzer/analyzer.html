@@ -1,31 +1,30 @@
 {% load static %}
+<!DOCTYPE html>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/interact.js/1.10.0/interact.min.js"></script>
 
 <html>
-
 <head>
+    <title>Aipollo: Optical Music Recognition</title>
     <link rel="stylesheet" type="text/css" href="{% static 'scoreanalyzer/style.css' %}">
 </head>
-
 <body>
-    <div style="display: flex; flex-direction: column;">
+    <div id="maincontainer">
         <div id="topheader">
             <a class="toplink" href="https://github.com/SimonSimonB/aipollo/README.md">About</a>
             <a class="toplink" href="">Help</a>
         </div>
-        <div style="display: flex; justify-content: center">
+        <div id="content">
             <div id="imagediv" style="position: relative">
                 <img src="{% static 'scoreanalyzer/bleib_rotated.jpg' %}">
             </div>
         </div>
     </div>
 
-    <script src="{% static 'scoreanalyzer/interactiveAnnotation.js' %}"></script>
+    <script src="{% static 'scoreanalyzer/interactive_annotation.js' %}"></script>
     <script>
         const scoreElementsJson = '{{ score_elements_json|safe }}';
         init(JSON.parse(scoreElementsJson));
     </script>
 </body>
-
 </html>
