@@ -13,8 +13,8 @@ class NoteDetector:
 
     def __init__(self, models_dir):
         model_path = {
-            'half': r'half_notes.pt',
-            'quarter': r"quarter_notes.pt",
+            ScoreElementType.half_note: r'half_notes.pt',
+            ScoreElementType.quarter_note: r"quarter_notes.pt",
         }
 
         self._nn = {key: models.UNet() for key in model_path.keys()}
@@ -32,29 +32,54 @@ class NoteDetector:
         image = cv2.resize(image, (round(image.shape[1] * resize_factor),
                                    round(image.shape[0] * resize_factor)))
 
-        # Detect notes.
-        all_notes = []
+        # Detect notes of each type.
+        notes = []
         for note_type, _ in self._nn.items():
-            notes = self._detect(image, note_type, staff_height)
+            notes_of_type = self.detect_notes_of_type(image, note_type,
+                                                      staff_height)
 
-            # Resize them to the original height of the image.
-            all_notes.extend([
-                ScoreElement({
-                    'half': ScoreElementType.half_note,
-                    'quarter': ScoreElementType.quarter_note
-                }[note_type],
-                             geometry_utils.get_convex_hull([
-                                 (1 / resize_factor) * point
-                                 for point in note.pixels
-                             ]))
-                for note in notes
-            ])
+            # Convert detected pixels in resized image to corresponding pixels in original image.
+            for note in notes_of_type:
+                note_pixels_in_original_image = geometry_utils.get_convex_hull([
+                    (1 / resize_factor) * point for point in note.pixels
+                ])
 
-            print(f'Found {len(notes)} of type {note_type}.')
+                notes.append(
+                    ScoreElement(note.type, note_pixels_in_original_image))
 
-        return all_notes
+            print(f'Found {len(notes_of_type)} of type {note_type}.')
 
-    def _detect(self, image, note_type, staff_height):
+        return notes
+
+    def _split_bounding_boxes(self, bounding_boxes, ideal_bounding_box_height):
+        new_boxes = []
+        indices_to_delete = []
+        for i, bounding_box in enumerate(bounding_boxes):
+            bounding_box_height = bounding_box[1].y - bounding_box[0].y
+            if bounding_box_height > ideal_bounding_box_height * 1.5:
+                indices_to_delete.append(i)
+                num_new_boxes = round(bounding_box_height /
+                                      ideal_bounding_box_height)
+                new_box_height = bounding_box_height / num_new_boxes
+                for j in range(num_new_boxes):
+                    jth_new_box_top_left = Point(
+                        bounding_box[0].y + j * new_box_height,
+                        bounding_box[0].x)
+                    jth_new_box_bottom_right = Point(
+                        bounding_box[0].y + (j + 1) * new_box_height - 1,
+                        bounding_box[1].x)
+                    new_boxes.append(
+                        (jth_new_box_top_left, jth_new_box_bottom_right))
+
+        bounding_boxes = [
+            bounding_box for i, bounding_box in enumerate(bounding_boxes)
+            if i not in indices_to_delete
+        ]
+        bounding_boxes.extend(new_boxes)
+
+        return bounding_boxes
+
+    def detect_notes_of_type(self, image, note_type, staff_height):
         utils.show(image)
         mask = utils.classify(image, self._nn[note_type])
 
@@ -90,33 +115,13 @@ class NoteDetector:
                 mask_with_boxes[point.y][point.x] = 1.0
         utils.show(mask_with_boxes)
 
-        # Compute size of bounding box of a single half note, based on the staff height.
-        half_note_height = staff_height / 4.0
-
-        # Split bounding boxes significantly larger than that for a half note into two, either horizontally or diagonally.
-        new_boxes = []
-        indices_to_delete = []
-        for i, bounding_box in enumerate(bounding_boxes):
-            bounding_box_height = bounding_box[1].y - bounding_box[0].y
-            if bounding_box_height > half_note_height * 1.5:
-                indices_to_delete.append(i)
-                num_new_boxes = round(bounding_box_height / half_note_height)
-                new_box_height = bounding_box_height / num_new_boxes
-                new_boxes.extend(
-                    (Point(bounding_box[0].y +
-                           j * new_box_height, bounding_box[0].x),
-                     Point(bounding_box[0].y +
-                           (j + 1) * new_box_height, bounding_box[1].x))
-                    for j in range(num_new_boxes))
-
-        bounding_boxes = [
-            bounding_box for i, bounding_box in enumerate(bounding_boxes)
-            if i not in indices_to_delete
-        ]
-        bounding_boxes.extend(new_boxes)
+        # Split bounding boxes significantly higher than a single note: they probably encompass several notes.
+        notehead_height = staff_height / 4.0
+        bounding_boxes = self._split_bounding_boxes(
+            bounding_boxes, ideal_bounding_box_height=notehead_height)
 
         # Extract pixels for each bounding box.
-        half_notes = []
+        notes = []
         for bounding_box in bounding_boxes:
             pixels = [
                 Point(y, x)
@@ -124,15 +129,15 @@ class NoteDetector:
                 for x in range(bounding_box[0].x, bounding_box[1].x)
                 if mask[y][x] == 1.0
             ]
-            half_notes.append(ScoreElement(ScoreElementType.half_note, pixels))
+            notes.append(ScoreElement(note_type, pixels))
 
         # Debug: plot bounding boxes
         mask_with_boxes = mask.copy()
-        for half_note in half_notes:
-            bounding_box = geometry_utils.get_bounding_box(half_note.pixels)
+        for note in notes:
+            bounding_box = geometry_utils.get_bounding_box(note.pixels)
             for point in geometry_utils.get_line_segment(
                     bounding_box[0], bounding_box[1]):
                 mask_with_boxes[point.y][point.x] = 1.0
         utils.show(mask_with_boxes, 'Bounding boxes')
 
-        return half_notes
+        return notes
