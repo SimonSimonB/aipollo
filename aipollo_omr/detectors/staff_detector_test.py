@@ -27,8 +27,10 @@ class StaffDetectorTest(unittest.TestCase):
 
     def test_be_still(self):
         image = cv2.imread('./sample_scans/be_still.jpg', cv2.IMREAD_GRAYSCALE)
-        detector = staff_detector.StaffDetector()
-        staffs, staff_height = detector.detect(image)
+        detector = staff_detector.StaffDetector(
+            r'C:/Users/simon/Coding/ML/aipollo/aipollo_omr/detectors/unet_torch/models'
+        )
+        staffs, _ = detector.detect(image)
         self.assertEqual(8, len(staffs))
 
 
